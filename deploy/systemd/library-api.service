@@ -1,0 +1,26 @@
+[Unit]
+Description=Mini Library API
+Documentation=https://github.com/hadiwehbi/mini-library-back
+After=network.target
+
+[Service]
+Type=simple
+User=library
+Group=library
+WorkingDirectory=/opt/library-api
+ExecStart=/usr/bin/node /opt/library-api/dist/main.js
+EnvironmentFile=/opt/library-api/.env
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=library-api
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/library-api/data
+
+[Install]
+WantedBy=multi-user.target
