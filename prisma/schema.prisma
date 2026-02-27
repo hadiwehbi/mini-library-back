@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Book {
+  id               String   @id @default(uuid())
+  title            String
+  author           String
+  status           String   @default("AVAILABLE") // AVAILABLE | CHECKED_OUT
+  isbn             String?
+  genre            String?
+  publishedYear    Int?
+  tags             String?  // JSON array stored as text
+  description      String?
+  coverImageUrl    String?
+  checkedOutByUserId String?
+  checkedOutAt     DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  activityLogs ActivityLog[]
+  checkedOutBy User?        @relation(fields: [checkedOutByUserId], references: [id])
+
+  @@index([status])
+  @@index([author])
+  @@index([title])
+}
+
+model User {
+  id    String @id // IdP sub
+  email String @unique
+  name  String
+  role  String @default("MEMBER") // ADMIN | LIBRARIAN | MEMBER
+
+  checkedOutBooks Book[]
+  activityLogs    ActivityLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ActivityLog {
+  id          String   @id @default(uuid())
+  type        String   // BOOK_CREATED | BOOK_UPDATED | BOOK_DELETED | BOOK_CHECKED_OUT | BOOK_CHECKED_IN
+  bookId      String?
+  actorUserId String
+  metadata    String?  // JSON stored as text
+  createdAt   DateTime @default(now())
+
+  book  Book? @relation(fields: [bookId], references: [id], onDelete: SetNull)
+  actor User  @relation(fields: [actorUserId], references: [id])
+
+  @@index([bookId])
+  @@index([actorUserId])
+  @@index([type])
+}
