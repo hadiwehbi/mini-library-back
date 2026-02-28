@@ -1,56 +1,69 @@
 # Mini Library Management System - Backend API
 
-A production-ready REST API for managing a mini library system built with NestJS, TypeScript, Prisma, and SQLite. Features book CRUD, check-in/check-out workflows, AI-powered metadata suggestions, RBAC authentication, and professional Swagger/OpenAPI documentation.
+A production-ready REST API for managing a mini library system built with **Express**, **TypeScript**, **Prisma**, and **SQLite**. Features book CRUD, check-in/check-out workflows, AI-powered metadata suggestions, RBAC authentication, and professional Swagger/OpenAPI documentation.
 
 ## Tech Stack
 
-- **Runtime**: Node.js 20 + TypeScript
-- **Framework**: NestJS
-- **Database**: SQLite via Prisma ORM
-- **Docs**: Swagger/OpenAPI at `/api/docs`
+- **Runtime**: Node.js 20+ / TypeScript 5.7
+- **Framework**: Express 4.21
+- **Database**: SQLite via Prisma 6 ORM
+- **Validation**: Zod
+- **Docs**: Swagger UI (swagger-ui-express) at `/api/docs`
 - **Auth**: OIDC/JWKS (production) + Dev JWT (development)
-- **Testing**: Jest + Supertest
+- **Security**: Helmet 8, CORS, compression
+- **Testing**: Jest + ts-jest
+- **Dev server**: tsx (watch mode)
 - **Deployment**: SSH to EC2 + systemd
 
 ## Project Structure
 
 ```
 src/
-├── main.ts                        # App entry point + Swagger setup
-├── app.module.ts                  # Root module
-├── config/                        # Environment configuration
-├── common/
-│   ├── prisma/                    # Prisma service
-│   ├── guards/                    # Auth + Roles guards
-│   ├── filters/                   # Global exception filter
-│   ├── middleware/                 # Request-ID middleware
-│   ├── decorators/                # @Roles, @Public, @CurrentUser
-│   └── dto/                       # Shared DTOs (pagination, errors)
-└── modules/
-    ├── auth/                      # Authentication (dev-login, me)
-    ├── books/                     # Book CRUD + checkout/checkin
-    ├── ai/                        # AI metadata + semantic search
-    └── health/                    # Health check endpoint
+├── index.ts               # Entry point (server bootstrap)
+├── app.ts                 # Express app factory
+├── config.ts              # Environment configuration
+├── errors.ts              # Custom error classes
+├── prisma.ts              # Prisma client singleton
+├── swagger.ts             # OpenAPI 3.0 spec definition
+├── middleware/
+│   ├── auth.ts            # JWT authentication (OIDC + dev mode)
+│   ├── roles.ts           # RBAC role guard
+│   ├── validate.ts        # Zod body/query validation
+│   ├── request-id.ts      # X-Request-ID middleware
+│   └── error-handler.ts   # Global error handler
+├── routes/
+│   ├── auth.routes.ts     # POST /auth/dev-login, GET /me
+│   ├── books.routes.ts    # Book CRUD + checkout/checkin
+│   ├── ai.routes.ts       # AI suggest-metadata + semantic-search
+│   └── health.routes.ts   # GET /health
+├── services/
+│   ├── auth.service.ts    # Auth business logic
+│   ├── books.service.ts   # Books business logic
+│   └── ai.service.ts      # AI mock provider logic
+└── schemas/
+    ├── auth.schema.ts     # Zod schemas for auth
+    ├── book.schema.ts     # Zod schemas for books
+    └── ai.schema.ts       # Zod schemas for AI
 prisma/
-├── schema.prisma                  # Database schema
-├── seed.ts                        # Seed data
-└── migrations/                    # Auto-generated migrations
+├── schema.prisma          # Database schema
+├── seed.ts                # Seed data
+└── migrations/            # Auto-generated migrations
 deploy/
 ├── scripts/
-│   ├── install.sh                 # First-time EC2 setup
-│   └── deploy.sh                  # Deployment script
+│   ├── install.sh         # First-time EC2 setup
+│   └── deploy.sh          # Deployment script
 └── systemd/
-    └── library-api.service        # systemd unit file
+    └── library-api.service
 .github/workflows/
-├── ci.yml                         # CI pipeline
-└── deploy.yml                     # Deploy to EC2
+├── ci.yml                 # CI pipeline (Node 20.x + 22.x)
+└── deploy.yml             # Deploy to EC2 via SSH
 ```
 
 ## Quick Start (Local Development)
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 20+ (or 22+)
 - npm
 
 ### Setup
@@ -71,7 +84,7 @@ npx prisma generate
 npx prisma migrate dev
 # Seed runs automatically with migrate dev
 
-# 5. Start the development server
+# 5. Start the development server (with hot reload via tsx)
 npm run start:dev
 ```
 
@@ -84,7 +97,7 @@ Swagger docs at `http://localhost:3000/api/docs`.
 |----------|---------|-------------|
 | `NODE_ENV` | `development` | Environment mode |
 | `PORT` | `3000` | Server port |
-| `API_VERSION` | `1.0.0` | Shown in health check |
+| `API_VERSION` | `1.0.0` | Shown in health check + Swagger |
 | `DATABASE_URL` | `file:./data/library.db` | SQLite database path |
 | `CORS_ORIGINS` | `http://localhost:3001,...` | Comma-separated allowed origins |
 | `DEV_AUTH_ENABLED` | `false` | Enable dev auth endpoint |
@@ -175,14 +188,15 @@ All endpoints are prefixed with `/api/v1`.
 
 ## Swagger/OpenAPI Documentation
 
-Professional Swagger documentation is served at `/api/docs` and includes:
+Professional OpenAPI 3.0 documentation is served at `/api/docs` and includes:
 
-- Detailed endpoint descriptions with examples
-- Request/response schemas with realistic sample data
+- Detailed endpoint descriptions with request/response examples
+- Full component schemas with realistic sample data
 - Error format documentation (consistent `{ error: { code, message, details } }`)
 - Bearer auth support (click Authorize, enter `Bearer <token>`)
 - Pagination contract for list endpoints
 - Tagged by module: Auth, Books, AI, Health
+- Raw JSON spec available at `/api/docs/json`
 
 ## Error Format
 
@@ -204,12 +218,11 @@ Error codes: `VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONF
 ## Scripts
 
 ```bash
-npm run start:dev       # Development with hot reload
-npm run build           # Production build
-npm run start:prod      # Start production build
-npm run test            # Run unit tests
+npm run start:dev       # Development with hot reload (tsx watch)
+npm run build           # Production build (tsc)
+npm start               # Start production build
+npm test                # Run unit tests
 npm run test:cov        # Tests with coverage
-npm run lint            # ESLint
 npm run prisma:generate # Generate Prisma client
 npm run prisma:migrate  # Run migrations (dev)
 npm run prisma:seed     # Seed database
@@ -220,9 +233,9 @@ npm run prisma:seed     # Seed database
 ### Architecture
 
 ```
-[S3 + CloudFront] → SPA (frontend)
-         ↓ (API calls)
-[EC2 t2.micro] → Node.js + SQLite
+[S3 + CloudFront] -> SPA (frontend)
+         | (API calls)
+[EC2 t2.micro] -> Node.js + Express + SQLite
   └── /opt/library-api/
       ├── dist/          # Compiled JS
       ├── data/          # SQLite database
